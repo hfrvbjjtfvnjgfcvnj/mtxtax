@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" 
+    uid="GeoChat.tak_notifier.All Chat Rooms.[UUID]" 
+    type="b-t-f" 
+    how="h-g-i-g-o" 
+    time="[TIME]" 
+    start="[TIME]" 
+    stale="[STALE]">
+    <point lat="[LAT]" lon="[LON]" hae="-21.913" ce="5.9" le="9999999.0"/>
+    <detail>
+        <__chat parent="RootContactGroup" groupOwner="false" 
+            messageId="[UUID]" 
+            chatroom="All Chat Rooms" id="All Chat Rooms" 
+            senderCallsign="[CALLSIGN]">
+                <chatgrp uid0="tak_notifier" uid1="All Chat Rooms" id="All Chat Rooms"/>
+        </__chat>
+        <remarks source="tak_notifier" to="All Chat Rooms" time="[TIME]">[CONTENT]</remarks>
+    </detail>
+</event>

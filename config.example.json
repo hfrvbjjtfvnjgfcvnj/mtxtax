@@ -1,0 +1,11 @@
+{
+    "meshtastic_devPath":"/dev/ttyUSB0",
+    "station_latitude":12.3456789,
+    "station_longitude":-34.5678901,
+    "tak_server_config": {
+        "PYTAK_TLS_CLIENT_CERT":"/path/to/client.pem", 
+        "PYTAK_TLS_CLIENT_KEY":"/path/to/client.key",
+        "PYTAK_TLS_CLIENT_CAFILE":"/path/to/ca-trusted.pem", 
+        "PYTAK_TLS_DONT_CHECK_HOSTNAME":"1", 
+        "COT_URL": "tls://TAK_HOSTNAME_OR_IP:8089"}
+}
