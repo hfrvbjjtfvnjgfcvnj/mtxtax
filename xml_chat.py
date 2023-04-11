@@ -4,6 +4,8 @@ chat='<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="GeoChat.
 
 root=ET.fromstring(chat);
 
+print(root.find("detail/__chat").attrib['senderCallsign'])
+
 remarks=root.findtext("detail/remarks");
 if remarks is not None:
     print(remarks)

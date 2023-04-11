@@ -112,11 +112,14 @@ class TakDeserializer_Worker(pytak.QueueWorker):
             if chat is None:
                 return False
             
+            callsign=root.find("detail/__chat").attrib['senderCallsign'];
+
             remarks=root.findtext("detail/remarks");
             if remarks is not None:
                 if "ICAO Type:" in remarks:
                     remarks=self.filter_tak_notification(remarks);
-                print("Forwarding to Mesh: '%s'"%remarks)
+                remarks="%s - %s"%(callsign,remarks);
+                print("Forwarding to Mesh: '%s'"%(remarks))
                 meshqueue.put(remarks);
                 return True
         except:
