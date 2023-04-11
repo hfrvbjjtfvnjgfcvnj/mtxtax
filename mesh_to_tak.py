@@ -12,6 +12,8 @@ from datetime import datetime
 from datetime import timezone
 from datetime import timedelta
 import uuid
+import tak_connection
+import mesh_connection
 
 config={}
 connection=None;
@@ -75,36 +77,41 @@ def send_to_tak(connection,content):
     tak_message=customize_template(content);
     connection.send(tak_message.encode('utf-8'));
 
-#load configuration
-load_configuration();
+def mesh_to_tak():
+    #load configuration
+    load_configuration();
 
-#load xml TAK message template
-loadxml();
+    #load xml TAK message template
+    loadxml();
 
-#setup pubsub callbacks
-pub.subscribe(onReceive, "meshtastic.receive")
-pub.subscribe(onConnection, "meshtastic.connection.established")
+    #setup pubsub callbacks
+    pub.subscribe(onReceive, "meshtastic.receive")
+    pub.subscribe(onConnection, "meshtastic.connection.established")
 
-#set meshtastic device path from config (if configured)
-_devPath=config.get("meshtastic_devPath", None);
-interface = meshtastic.serial_interface.SerialInterface(devPath=_devPath)
+    #set meshtastic device path from config (if configured)
+    _devPath=config.get("meshtastic_devPath", None);
+    mesh=mesh_connection.MeshConnection(config);
 
-#setup secure connection to TAK server
-connection = tak_connection.create_tak_connection(config);
-time.sleep(2);
-#connection.send(str("connector up").encode('utf-8'))
-send_to_tak(connection, "mesh_to_tak connector up");
+    #setup secure connection to TAK server
+    connection = tak_connection.create_tak_connection(config);
+    time.sleep(2);
+    
+    #connection.send(str("connector up").encode('utf-8'))
+    send_to_tak(connection, "mesh_to_tak connector up");
 
-#loop forever forwarding messages from the mesh to the TAK server
-while True:
-    #time.sleep(1000);
-    try:
-        mesh_message=takqueue.get(block=True,timeout=60);
-        if mesh_message is not None and len(mesh_message) > 0:
-            print("forwarding message %s"%mesh_message)
-            #connection.send(mesh_message.encode('utf-8'));
-            send_to_tak(connection, mesh_message);
-        takqueue.task_done()
-    except queue.Empty:
-        pass
-interface.close();
+    #loop forever forwarding messages from the mesh to the TAK server
+    while True:
+        #time.sleep(1000);
+        try:
+            mesh_message=takqueue.get(block=True,timeout=60);
+            if mesh_message is not None and len(mesh_message) > 0:
+                print("forwarding message %s"%mesh_message)
+                #connection.send(mesh_message.encode('utf-8'));
+                send_to_tak(connection, mesh_message);
+            takqueue.task_done()
+        except queue.Empty:
+            pass
+    mesh.close();
+
+if __name__ == "__main__":
+    mesh_to_tak();
