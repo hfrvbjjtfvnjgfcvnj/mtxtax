@@ -121,7 +121,7 @@ class TakDeserializer_Worker(pytak.QueueWorker):
         for line in lines:
 
             #special ##FIRST## filter denotes 'always include the first line'
-            if first and "##FIRST##" in include_filters:
+            if (filter_match is None) or (first and "##FIRST##" in include_filters):
                 filtered=filtered+("%s\n"%line);
             else:
                 for include in include_filters:
