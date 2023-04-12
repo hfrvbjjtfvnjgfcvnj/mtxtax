@@ -1,5 +1,8 @@
 {
     "meshtastic_devPath":"/dev/ttyUSB0",
+    "meshtastic_message_chunk":128,
+    "meshtastic_max_kbps":0.0125,
+    "meshtastic_throttle_interval_ms":600000,
     "station_latitude":12.3456789,
     "station_longitude":-34.5678901,
     "tak_server_config": {

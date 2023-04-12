@@ -1,0 +1,14 @@
+[Unit]
+Description=mtxtax - Bidirectional Meshtastic <--> TAK Server Bridge
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/bash /opt/mtxtax/mtxtax
+User=mtxtax
+Group=mtxtax
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
