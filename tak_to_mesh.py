@@ -62,8 +62,7 @@ def mesh_thread():
         try:
             mesh_message=meshqueue.get(block=True,timeout=60);
             if mesh_message is not None and len(mesh_message) > 0:
-                print("forwarding message %s"%mesh_message)
-                #connection.send(mesh_message.encode('utf-8'));
+                #print("forwarding message %s"%mesh_message)
                 send_to_mesh(mesh_message);
             meshqueue.task_done()
         except queue.Empty:
@@ -71,6 +70,13 @@ def mesh_thread():
         pass
 
 class TakDeserializer_Worker(pytak.QueueWorker):
+
+    def __init__(self,queue,pytakConfig,_tak_message_include_filter_map,tak_message_string_replace_map):
+        super().__init__(queue,pytakConfig);
+        self.tak_message_include_filter_map=_tak_message_include_filter_map;
+        self.tak_message_string_replace_map=tak_message_string_replace_map;
+        print(self.tak_message_string_replace_map);
+        
     async def handle_data(self, cot):
         #print("handle_data(cot)");
         self.parseCOT(cot);
@@ -84,24 +90,65 @@ class TakDeserializer_Worker(pytak.QueueWorker):
             return
         if self.handle_pli(cot):
             return
-        print("Dropping CoT");
+        #print("Dropping CoT");
 
-    def filter_tak_notification(self,remarks):
+    def apply_configured_filters(self,remarks):
         lines=remarks.split("\n");
         first=True
         filtered=""
-        for line in lines:
+
+        #find the first key in the filter map that matches the current message
+
+        #filters is a list of regular expressions for mapping messages to lists of filter regexes
+        filters=self.tak_message_include_filter_map.keys();
+        filter_match=None;
+        include_filters=None;
+
+        #for each high-level regex, try find the first one that matches the message
+        #this is "categorizing" how we filter down the message contents to gross "message types"
+        #but doing so in a generalized, configurable manner
+        for filter in filters:
+            #check the entire message against the high-level filter regex
+            #print("Checking |%s| against |%s|"%(filter,remarks));
+            filter_match=re.search(filter,remarks.replace("\n", " "));
             
-            if first or "Operator: " in line or "Bearing: " in line or "ICAO Type: " in line or "Distance: " in line or "Model: " in line:
-                #print(line);
+            #if we match, lookup the line-by-line filter list
+            if filter_match is not None:
+                include_filters=self.tak_message_include_filter_map[filter];
+                break;
+        
+        #filter the message line-by-line using the filter list we just found
+        for line in lines:
+
+            #special ##FIRST## filter denotes 'always include the first line'
+            if first and "##FIRST##" in include_filters:
                 filtered=filtered+("%s\n"%line);
             else:
-                #print("####%s"%line);
-                pass
+                for include in include_filters:
+                    if re.search(include,line) is not None:
+                        filtered=filtered+("%s\n"%line);
+                        break;
+            
             first=False;
-        filtered=filtered.replace("||","\n").replace("None\n","");
-        filtered=re.sub(".*: ","",filtered);
-        #print(filtered);
+
+        filters=self.tak_message_string_replace_map.keys();
+        repMap={}
+        #for each high-level regex, try find the first one that matches the message
+        #this is "categorizing" how we filter down the message contents to gross "message types"
+        #but doing so in a generalized, configurable manner
+        for filter in filters:
+            #check the entire message against the high-level filter regex
+            filter_match=re.search(filter,remarks.replace("\n", " "));
+            
+            #if we match, lookup the line-by-line filter list
+            if filter_match is not None:
+                repMap=self.tak_message_string_replace_map[filter];
+        
+        #iterate through the keys and apply each regex in order to cleanup anything we dont want to include in the forwarded message
+        reps=repMap.keys();
+        for rep in reps:
+            filtered=re.sub(rep,repMap[rep],filtered);
+        
         return filtered
 
     def handle_chat(self,cot):
@@ -116,10 +163,9 @@ class TakDeserializer_Worker(pytak.QueueWorker):
 
             remarks=root.findtext("detail/remarks");
             if remarks is not None:
-                if "ICAO Type:" in remarks:
-                    remarks=self.filter_tak_notification(remarks);
+                remarks=self.apply_configured_filters(remarks);
                 remarks="%s - %s"%(callsign,remarks);
-                print("Forwarding to Mesh: '%s'"%(remarks))
+                print("Forwarding to Mesh: \n%s"%(remarks))
                 meshqueue.put(remarks);
                 return True
         except:
@@ -133,16 +179,20 @@ class TakDeserializer_Worker(pytak.QueueWorker):
             track=root.find("detail/track");
             if track is None:
                 return False
-            print("Dropping PLI")
+            #print("Dropping PLI")
         except:
             pass
         return False
 
 class TakDeserializerWrapper:
-    def __init__(self):
+    def __init__(self,config):
+        self.config=config;
         self.worker=None;
+        self.tak_message_include_filter_map={}
     def init(self,queue,pytakConfig):
-        self.worker=TakDeserializer_Worker(queue,pytakConfig);
+        self.tak_message_include_filter_map=self.config.get('tak_message_include_filter_map',{});
+        self.tak_message_string_replace_map=self.config.get('tak_message_string_replace_map',{});
+        self.worker=TakDeserializer_Worker(queue,pytakConfig,self.tak_message_include_filter_map,self.tak_message_string_replace_map);
     def get_worker(self):
         return self.worker;
 
@@ -158,7 +208,7 @@ def tak_to_mesh():
     mesh=mesh_connection.MeshConnection(config);
 
     #setup secure connection to TAK server
-    connection = tak_connection.create_tak_connection(config,deserializer_wrapper=TakDeserializerWrapper());
+    connection = tak_connection.create_tak_connection(config,deserializer_wrapper=TakDeserializerWrapper(config));
     time.sleep(2);
 
     thread=threading.Thread(target=mesh_thread);

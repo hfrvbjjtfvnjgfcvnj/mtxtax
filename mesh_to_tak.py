@@ -105,8 +105,8 @@ def mesh_to_tak():
         try:
             mesh_message=takqueue.get(block=True,timeout=60);
             if mesh_message is not None and len(mesh_message) > 0:
-                print("forwarding message %s"%mesh_message)
-                #connection.send(mesh_message.encode('utf-8'));
+                #print("forwarding message %s"%mesh_message)
+                
                 send_to_tak(connection, mesh_message);
             takqueue.task_done()
         except queue.Empty:
