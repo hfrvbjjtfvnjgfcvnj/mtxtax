@@ -2,3 +2,4 @@ meshtastic==2.1.5
 pubsub==0.1.2
 pytak==5.6.1
 takproto==2.0.0
+python-dateutil==2.8.2

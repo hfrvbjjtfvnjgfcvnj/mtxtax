@@ -14,6 +14,7 @@ import mesh_connection
 import time
 import re
 from datetime import datetime
+from dateutil import tz
 
 config={}
 meshqueue=queue.Queue();
@@ -162,11 +163,10 @@ class TakDeserializer_Worker(pytak.QueueWorker):
           
             #condense time down for mesh forwarding
             start_time=root.attrib['start'];
-            print(start_time);
             ztime=datetime.strptime(start_time,'%Y-%m-%dT%H:%M:%S%z')
-            print(ztime);
-            start_time=ztime.strftime('%d %h %H:%M:%S');
-            print(start_time);
+            local_tz=tz.tzlocal();
+            ltime=ztime.astimezone(local_tz);
+            start_time=ltime.strftime('%d %h %H:%M:%S');
 
             callsign=root.find("detail/__chat").attrib['senderCallsign'];
 
