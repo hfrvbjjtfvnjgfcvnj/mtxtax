@@ -9,8 +9,18 @@ thread=None;
 lock=threading.Lock();
 
 async def a_conn_thread():
-    #print("setting up instance...");
-    await instance.setup();
+    while True:
+        try:
+            task = asyncio.create_task(instance.setup());
+            await task
+            ex = task.exception();
+            print(ex);
+            print("sleeping to reconnect...");
+            time.sleep(5);
+        except:
+            print("caught exception - sleeping");
+            time.sleep(5);
+
 
 def conn_thread():
     asyncio.run(a_conn_thread());
@@ -69,6 +79,31 @@ class TakConnection:
             deserializer_wrapper.init(self.clitool.rx_queue,self.pytakConfig);
             self.deserializer=deserializer_wrapper.get_worker();
     
+    async def run_clitool(self):
+        """Run this Thread and its associated coroutine tasks."""
+        self.clitool._logger.info("Run: %s", self.__class__)
+
+        await self.clitool.hello_event()
+        self.clitool.run_tasks()
+
+        done, _ = await asyncio.wait(
+            self.clitool.running_tasks, return_when=asyncio.FIRST_COMPLETED
+        )
+
+        for task in done:
+            #self._logger.info("Complete: %s", task)
+            print("Complete: %s", task)
+
+        for task in self.clitool.running_tasks:
+            try:
+                task.cancel();
+                ex = task.exception();
+                if ex is not None:
+                    print(ex);
+            except:
+                pass;
+        self.clitool.tasks.clear();
+        self.clitool.running_tasks.clear();
 
     async def setup(self):
         print("settingup CLITOOL...");
@@ -80,7 +115,7 @@ class TakConnection:
         self.clitool.add_task(self.serializer);
         self.clitool.add_task(self.deserializer);
         print("RUNNING CLITOOL");
-        await self.clitool.run();
+        await self.run_clitool();
         print("CLITOOL DONE");
 
     def send(self,data):
