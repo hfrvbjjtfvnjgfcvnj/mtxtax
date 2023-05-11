@@ -13,6 +13,8 @@ import tak_connection
 import mesh_connection
 import time
 import re
+from datetime import datetime
+from dateutil import tz
 
 config={}
 meshqueue=queue.Queue();
@@ -158,13 +160,20 @@ class TakDeserializer_Worker(pytak.QueueWorker):
             chat=root.find("detail/__chat");
             if chat is None:
                 return False
-            
+          
+            #condense time down for mesh forwarding
+            start_time=root.attrib['start'];
+            ztime=datetime.strptime(start_time,'%Y-%m-%dT%H:%M:%S%z')
+            local_tz=tz.tzlocal();
+            ltime=ztime.astimezone(local_tz);
+            start_time=ltime.strftime('%d %h %H:%M:%S');
+
             callsign=root.find("detail/__chat").attrib['senderCallsign'];
 
             remarks=root.findtext("detail/remarks");
             if remarks is not None:
                 remarks=self.apply_configured_filters(remarks);
-                remarks="%s - %s"%(callsign,remarks);
+                remarks="%s: %s - %s"%(start_time,callsign,remarks);
                 print("Forwarding to Mesh: \n%s"%(remarks))
                 meshqueue.put(remarks);
                 return True
